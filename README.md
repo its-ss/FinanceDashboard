@@ -1,152 +1,148 @@
-# FinanceFlow — Finance Dashboard UI
+# Finance Dashboard
 
-A clean, narrative-driven personal finance dashboard built as a frontend internship assignment. The goal was to go beyond a simple data display and create an interface that *tells a story* about your finances.
+A personal finance dashboard built with React 18, TypeScript, Vite, and Tailwind CSS v4. Built as a frontend internship assignment — the goal was to create something that feels genuinely useful, not just a demo.
 
 ---
 
-## Quick Start
+## Features
+
+### Dashboard Overview
+- **Summary cards** — current month income, expenses, net, and savings rate with month-over-month deltas
+- **Area chart** — income vs expenses over the last 6 months; click a month to jump to filtered transactions
+- **Pie chart** — spending breakdown by category; click a slice to filter by that category
+- **Bar chart** — monthly income vs expenses comparison
+
+### Transactions
+- Full CRUD — add, edit, delete with undo (5-second undo toast, no confirm dialogs)
+- **Search** by description or merchant with `/` keyboard shortcut to focus
+- **Filter** by type (income/expense), category, and date range
+- **Quick date shortcuts** — Today, This Week, This Month, Last Month, Last 3 Months, This Year
+- **Sort** by date, amount, or category (ascending/descending)
+- **Pagination** — 15 transactions per page
+- **Export** — CSV or JSON export of filtered results
+- **Bill upload** — upload a JPG, PNG, PDF, or Excel file; image/PDF previewed in-browser, Excel rows parsed and first row auto-fills the transaction form
+- Active filter chips with individual clear buttons
+- Active filter count visible in nav badge
+
+### Insights
+- **Narrative cards** — plain-English summaries like "🍔 Food accounts for 32% of your spending — up 12% from last month" and "✅ You're managing well — only 58% of your budget used this month"
+- **Best month** — lowest expense month across all data
+- **Spending risk** indicator (safe / warning / danger) based on budget usage
+- **Top category** breakdown with month-over-month change
+
+### Budget Tracker
+- Set a monthly spending limit (admin only)
+- Progress bar showing current month spend vs limit with projected end-of-month spend
+- **Per-category limits** — collapsible section with inline edit for each expense category
+- Over-limit categories highlighted in red with badge count on the section toggle
+- All budget inputs validated with descriptive error messages
+
+### Role-Based Access
+- **Admin** — full access: add/edit/delete transactions, upload bills, set budgets and category limits, change role
+- **Viewer** — read-only: all buttons disabled (not hidden) with tooltip explaining why
+- Role toggle in the header for demo purposes
+
+### UX Details
+- Dark mode toggle (persisted to localStorage)
+- Toast notification system with auto-dismiss and progress bar; destructive actions (delete) include an undo action
+- Skeleton loaders on initial data render
+- Keyboard shortcuts: `A` to open Add Transaction, `/` to focus search
+- Mobile-responsive with bottom navigation on small screens
+- Interactive charts navigate to filtered transactions on click
+- All form inputs validated on blur with field-level error messages and green ✓ on valid fields
+
+---
+
+## Tech Stack
+
+| Layer | Choice |
+|---|---|
+| Framework | React 18 + TypeScript (strict) |
+| Build | Vite 8 |
+| Styling | Tailwind CSS v4 (CSS-based config, no `tailwind.config.js`) |
+| State | Zustand 5 with `persist` middleware |
+| Charts | Recharts |
+| Routing | React Router v7 (lazy-loaded pages) |
+| Icons | Lucide React |
+| Excel parsing | SheetJS (`xlsx`) |
+
+---
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── charts/          # AreaChart, PieChart, BarChart wrappers
+│   ├── dashboard/       # SummaryCards, InsightsSection
+│   ├── insights/        # BudgetTracker, InsightCard
+│   ├── transactions/    # TransactionList, TransactionModal, TransactionFilters,
+│   │                    # DateShortcuts, BillUploadModal
+│   ├── ui/              # Toast, ProgressBar, Skeleton, Tooltip
+│   └── layout/          # Sidebar, MobileNav, Header
+├── data/
+│   └── mockData.ts      # 63 mock transactions + category config
+├── hooks/
+│   ├── useTransactions.ts  # filtering, sorting, pagination
+│   └── useInsights.ts      # narrative generation, budget metrics
+├── pages/
+│   ├── DashboardPage.tsx
+│   ├── TransactionsPage.tsx
+│   └── InsightsPage.tsx
+├── store/
+│   └── useStore.ts      # Zustand store (transactions, budget, filters, toasts)
+├── types/
+│   └── index.ts         # All TypeScript interfaces
+└── utils/
+    ├── calculations.ts  # Monthly totals, category grouping, projections
+    ├── validations.ts   # Reusable field validators (amount, date, description…)
+    ├── billParser.ts    # Excel file parsing with column auto-detection
+    └── export.ts        # CSV / JSON export
+```
+
+---
+
+## Design Decisions
+
+**Business logic decoupled from components.** `useTransactions` and `useInsights` are custom hooks that do all computation (filtering, sorting, narrative generation) via `useMemo`. Components only render — they don't contain conditional logic about what data to show.
+
+**Validation on blur, not on keystroke.** Errors appear after a field loses focus, not while typing. The `touched` map tracks which fields have been visited. On form submit, all fields are marked touched at once so all errors appear simultaneously.
+
+**Undo delete instead of confirm dialogs.** Deleting a transaction immediately removes it from the UI and starts a 5-second timer. An undo toast lets the user recover it. This feels faster than a modal confirm and is equally safe.
+
+**Per-category budget limits as a collapsible section.** Budget limits per category are a power-user feature. Collapsing them by default keeps the BudgetTracker card clean while making the feature discoverable via a toggle that shows "N over limit" when relevant.
+
+**Tailwind v4 instead of v3.** The v4 API is CSS-first (`@import "tailwindcss"` in the stylesheet, `@custom-variant` for dark mode). There is no `tailwind.config.js`. Dark mode is implemented as a `.dark` class on `<html>` managed by Zustand.
+
+**No OCR or backend for bill upload.** The bill upload feature is entirely frontend. Images and PDFs are previewed using `URL.createObjectURL` (native browser API, no library). Excel files are parsed with SheetJS using keyword-based column detection (headers containing "amount", "date", "description", etc.) to suggest pre-fill values.
+
+---
+
+## Trade-offs
+
+- **Mock data only** — no API, no persistence beyond `localStorage`. Adding a real backend would require replacing the Zustand store actions with async fetch calls and handling loading/error states.
+- **SheetJS bundle size** — the `xlsx` library adds ~200 KB to the bundle. Acceptable for an internal dashboard; for a public product, dynamically importing it only when the upload modal opens would be better.
+- **No virtualization** — the transaction list paginates at 15 rows. With tens of thousands of rows this would need `react-window` or similar.
+- **Role stored in memory** — switching Admin/Viewer is a UI demo toggle. In a real app, role would come from an auth token and not be changeable client-side.
+
+---
+
+## What I'd Improve
+
+- **Real backend + auth** — replace Zustand persist with server state (React Query / SWR), add JWT auth, persist budget limits server-side
+- **Actual OCR** — use Tesseract.js or a cloud Vision API to extract text from image/PDF bills automatically
+- **Recurring transactions** — detect and flag regular payments (subscriptions, rent), project them in the budget tracker
+- **Multi-currency support** — store a currency field per transaction, show converted totals in user's preferred currency
+- **Lazy-load xlsx** — `import('xlsx')` dynamically inside BillUploadModal to keep the initial bundle smaller
+- **E2E tests** — Playwright tests for the key flows (add transaction, upload bill, set budget, export)
+
+---
+
+## Getting Started
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open [http://localhost:5173](http://localhost:5173).
-
-To build for production:
-```bash
-npm run build
-npm run preview
-```
-
----
-
-## Features
-
-### Dashboard
-- **3 Summary Cards** — Total Balance, Income, and Expenses with color-coded amounts (green/red/neutral)
-- **Balance Trend Chart** — Area chart showing monthly income vs expenses with gradient fills. **Click any month point to filter transactions to that month**
-- **Spending Breakdown** — Pie chart with interactive legend. **Click any category slice to filter transactions**
-- Skeleton loaders on first render to demonstrate loading states
-
-### Transactions
-- **Full CRUD** — Add, edit, delete transactions (Admin role only)
-- **Advanced Filtering** — Search, category dropdown, type toggle (all/income/expense), date range with validation
-- **Sort** — By date, amount, or category (asc/desc toggle)
-- **Active filter chips** — Visual indicators of active filters, individually clearable
-- **Pagination** — 10 per page with page number display
-- **Export** — Download filtered transactions as CSV or JSON
-- **Keyboard shortcuts:**
-  - `/` — Focus the search input
-  - `A` — Open Add Transaction modal (Admin only)
-
-### Insights (Financial Advisor Mode)
-- **Narrative cards** — Dynamic text insights, not just raw numbers:
-  - *"🍔 Food accounts for 32% of your spending — up 12% from last month"*
-  - *"⚠️ You are on track to exceed your monthly budget by month end"*
-  - *"📈 Your income is stable, but expenses have been rising"*
-- **Budget Tracker** — Set a monthly limit, see animated progress bar (green → yellow → red at 70% and 90%), plus projected end-of-month spend
-- **Month-over-Month comparison** — Side-by-side current vs previous month with % change indicator
-- **Spending by Category** — Horizontal bar chart
-- **Monthly Summary Table** — Full history with income/expenses/net per month
-- **Best Month** — Highlights your most frugal month
-
-### Role-Based UI
-Switch between **Admin** and **Viewer** roles via the dropdown in the header:
-
-| Feature | Viewer | Admin |
-|---------|--------|-------|
-| View all data | ✅ | ✅ |
-| Add transactions | ❌ Disabled + tooltip | ✅ Keyboard shortcut: A |
-| Edit/Delete | ❌ Disabled + tooltip | ✅ |
-| Set budget | ❌ Disabled + tooltip | ✅ |
-| Empty state message | "Contact an admin" | "Add your first transaction" |
-
-Disabled buttons remain **visible** (not hidden) with tooltips explaining *why* they're restricted — a deliberate UX choice to make the permission model clear to users.
-
-### Additional Features
-- **Dark mode** — Full dark theme toggle, persisted across sessions
-- **localStorage persistence** — All state (transactions, role, budget, dark mode) survives page refresh
-- **Responsive** — Works from 320px mobile to 4K desktop. Sticky bottom nav on mobile, collapsible sidebar on desktop
-- **Edge cases** — No transactions (role-aware messages), only-income/expense states, invalid date ranges, very large number formatting ($1.2M)
-
----
-
-## Architecture
-
-```
-src/
-├── types/          # TypeScript interfaces (Transaction, Role, Filter, etc.)
-├── data/           # Mock data + category configuration (colors, hex values)
-├── store/          # Zustand store with localStorage persist middleware
-├── hooks/          # Business logic, decoupled from UI components
-│   ├── useTransactions  # Filtered/sorted/paginated transactions (memoized)
-│   └── useInsights      # Derived metrics + narrative strings (memoized)
-├── utils/          # Pure functions: calculations, formatting, export
-├── components/     # UI components organized by domain
-│   ├── layout/     # Shell, sidebar, header, mobile bottom nav
-│   ├── ui/         # Reusable primitives: skeleton, tooltip, progress bar, empty state
-│   ├── dashboard/  # Charts and summary cards
-│   ├── transactions/ # Table, filters, modal
-│   └── insights/   # Narrative cards, budget tracker
-└── pages/          # Route-level components (lazy loaded)
-```
-
-**Data flow:** `Store → Hooks (memoized) → Components`
-
-Business logic is intentionally decoupled from UI. Components only handle rendering — all calculations and data transformations live in `hooks/` and `utils/`.
-
----
-
-## Design Decisions
-
-### Zustand over Redux
-Zustand requires ~10x less boilerplate for the same functionality at this scale. The `persist` middleware gives localStorage integration in 2 lines. Redux would add complexity without benefit for a single-page dashboard.
-
-### Tailwind CSS v4 over MUI or styled-components
-Tailwind keeps styles co-located with markup (no context switching), enforces a consistent 8px spacing grid, and generates only the CSS classes actually used. MUI would constrain the design to Material patterns; styled-components adds a JS-in-CSS layer that complicates SSR and theming.
-
-### Recharts over Chart.js or Victory
-Recharts is built for React with a composable, declarative API. It supports `onClick` handlers on chart elements directly (used for interactive chart filtering), has excellent TypeScript types, and animates by default.
-
-### Role simulation in frontend store
-Roles are toggled in the UI for demonstration purposes. In a production system, role would come from a JWT/session and the store would be initialized from an auth context. The current approach correctly models the *behavior* (disabled states, tooltips, empty state variants) that a real RBAC system would produce.
-
----
-
-## Trade-offs
-
-| Decision | What I chose | What I'd do with more time |
-|----------|-------------|---------------------------|
-| Data source | Static mock data | Real REST/GraphQL API with React Query |
-| State persistence | localStorage | IndexedDB for larger datasets |
-| Testing | None | Vitest unit tests for hooks/utils + Playwright E2E |
-| Auth | Frontend role toggle | JWT + protected routes |
-| Charts interactivity | Click-to-navigate | Drill-down with animated transitions |
-
----
-
-## What I'd Improve With More Time
-
-1. **Unit tests** for all utility functions and custom hooks (`useTransactions`, `useInsights`)
-2. **E2E tests** with Playwright covering the role-switch flow and chart interactions
-3. **Real API** layer with React Query for caching, optimistic updates, and background refetch
-4. **Recurring transactions** — auto-generate based on `isRecurring` flag
-5. **Spending goals** — e.g. "Reduce Food by 20% this month" with progress tracking
-6. **Notification system** — toast notifications on add/edit/delete actions
-7. **Accessibility audit** — proper ARIA labels, focus management in modal, keyboard navigation in charts
-8. **Bundle optimization** — route-level code splitting is in place; would add Sentry for error monitoring
-
----
-
-## Tech Stack
-
-| | |
-|---|---|
-| Framework | React 18 + TypeScript |
-| Build | Vite 8 |
-| Styling | Tailwind CSS v4 |
-| Charts | Recharts |
-| State | Zustand 5 + persist middleware |
-| Routing | React Router v7 |
-| Icons | Lucide React |
+Open [http://localhost:5173](http://localhost:5173). Toggle between Admin and Viewer roles using the button in the top-right corner.

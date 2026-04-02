@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { Settings, Lock, ChevronDown, ChevronUp, Pencil, Check, X } from 'lucide-react';
+import { Settings, Lock, ChevronDown, ChevronUp, Pencil, Check, X, AlertCircle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { formatCurrency, getCurrentMonthKey } from '../../utils/calculations';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Tooltip } from '../ui/Tooltip';
 import { CATEGORY_CONFIG, EXPENSE_CATEGORIES } from '../../data/mockData';
+import { validateBudgetLimit } from '../../utils/validations';
 import type { InsightData } from '../../types';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -27,9 +28,11 @@ export function BudgetTracker({ insights }: BudgetTrackerProps) {
 
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [budgetError, setBudgetError] = useState<string | null>(null);
   const [showCategoryLimits, setShowCategoryLimits] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [catInputValue, setCatInputValue] = useState('');
+  const [catError, setCatError] = useState<string | null>(null);
 
   const isAdmin = role === 'admin';
   const hasBudget = budget.monthlyLimit > 0;
@@ -47,6 +50,9 @@ export function BudgetTracker({ insights }: BudgetTrackerProps) {
   }, [transactions, currentMonth]);
 
   const handleSave = () => {
+    const err = validateBudgetLimit(inputValue);
+    if (err) { setBudgetError(err); return; }
+    setBudgetError(null);
     const val = Number(inputValue);
     if (val > 0) {
       setBudget(val);
@@ -57,10 +63,14 @@ export function BudgetTracker({ insights }: BudgetTrackerProps) {
 
   const handleEdit = () => {
     setInputValue(String(budget.monthlyLimit || ''));
+    setBudgetError(null);
     setEditing(true);
   };
 
   const handleCategoryEditSave = (category: string) => {
+    const err = validateBudgetLimit(catInputValue);
+    if (err) { setCatError(err); return; }
+    setCatError(null);
     const val = Number(catInputValue);
     if (val > 0) {
       setCategoryLimit(category, val);
@@ -74,6 +84,7 @@ export function BudgetTracker({ insights }: BudgetTrackerProps) {
 
   const handleCategoryEditStart = (category: string) => {
     setCatInputValue(String(budget.categoryLimits?.[category] || ''));
+    setCatError(null);
     setEditingCategory(category);
   };
 
@@ -102,21 +113,30 @@ export function BudgetTracker({ insights }: BudgetTrackerProps) {
 
       {/* Overall budget edit form */}
       {editing && isAdmin && (
-        <div className="mb-4 flex gap-2">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
-            <input
-              type="number"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
-              placeholder="Monthly limit"
-              autoFocus
-              className="w-full pl-7 pr-3 py-2 text-sm rounded-lg border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+        <div className="mb-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+              <input
+                type="number"
+                value={inputValue}
+                onChange={(e) => { setInputValue(e.target.value); if (budgetError) setBudgetError(validateBudgetLimit(e.target.value)); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
+                placeholder="Monthly limit"
+                autoFocus
+                className={`w-full pl-7 pr-3 py-2 text-sm rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 transition-all
+                  ${budgetError ? 'border-red-400 dark:border-red-500 focus:ring-red-400' : 'border-indigo-300 dark:border-indigo-600 focus:ring-indigo-500'}`}
+              />
+            </div>
+            <button onClick={handleSave} className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save</button>
+            <button onClick={() => setEditing(false)} className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Cancel</button>
           </div>
-          <button onClick={handleSave} className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save</button>
-          <button onClick={() => setEditing(false)} className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Cancel</button>
+          {budgetError && (
+            <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
+              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+              {budgetError}
+            </p>
+          )}
         </div>
       )}
 
@@ -212,25 +232,34 @@ export function BudgetTracker({ insights }: BudgetTrackerProps) {
 
                       {isAdmin ? (
                         isEditingThis ? (
-                          <div className="flex items-center gap-1">
-                            <div className="relative">
-                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
-                              <input
-                                type="number"
-                                value={catInputValue}
-                                onChange={(e) => setCatInputValue(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') handleCategoryEditSave(category); if (e.key === 'Escape') { setEditingCategory(null); } }}
-                                placeholder="0"
-                                autoFocus
-                                className="w-20 pl-5 pr-2 py-1 text-xs rounded-md border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                              />
+                          <div className="flex flex-col items-end gap-0.5">
+                            <div className="flex items-center gap-1">
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                                <input
+                                  type="number"
+                                  value={catInputValue}
+                                  onChange={(e) => { setCatInputValue(e.target.value); if (catError) setCatError(validateBudgetLimit(e.target.value)); }}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleCategoryEditSave(category); if (e.key === 'Escape') { setEditingCategory(null); setCatError(null); } }}
+                                  placeholder="0"
+                                  autoFocus
+                                  className={`w-20 pl-5 pr-2 py-1 text-xs rounded-md border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 transition-all
+                                    ${catError ? 'border-red-400 dark:border-red-500 focus:ring-red-400' : 'border-indigo-300 dark:border-indigo-600 focus:ring-indigo-500'}`}
+                                />
+                              </div>
+                              <button onClick={() => handleCategoryEditSave(category)} className="p-1 rounded text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30">
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => { setEditingCategory(null); setCatError(null); }} className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-                            <button onClick={() => handleCategoryEditSave(category)} className="p-1 rounded text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30">
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => setEditingCategory(null)} className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                            {catError && (
+                              <p className="flex items-center gap-1 text-xs text-red-500">
+                                <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                {catError}
+                              </p>
+                            )}
                           </div>
                         ) : (
                           <button

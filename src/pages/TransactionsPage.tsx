@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Download, ChevronDown } from 'lucide-react';
+import { Plus, Download, ChevronDown, Upload } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useTransactions } from '../hooks/useTransactions';
 import { TransactionFilters } from '../components/transactions/TransactionFilters';
 import { TransactionList } from '../components/transactions/TransactionList';
 import { TransactionModal } from '../components/transactions/TransactionModal';
+import { BillUploadModal } from '../components/transactions/BillUploadModal';
 import { Tooltip } from '../components/ui/Tooltip';
 import { exportToCSV, exportToJSON } from '../utils/export';
 import type { Transaction } from '../types';
@@ -21,6 +22,7 @@ export default function TransactionsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [billUploadOpen, setBillUploadOpen] = useState(false);
 
   const { filteredTransactions, paginatedTransactions, totalCount, totalPages, currentPage, dateRangeInvalid } = useTransactions();
 
@@ -129,6 +131,28 @@ export default function TransactionsPage() {
             )}
           </div>
 
+          {/* Upload Bill */}
+          {role === 'admin' ? (
+            <button
+              onClick={() => setBillUploadOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              title="Upload bill (image, PDF, or Excel)"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">Upload Bill</span>
+            </button>
+          ) : (
+            <Tooltip content="Only admins can upload bills">
+              <button
+                disabled
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg cursor-not-allowed"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Upload Bill</span>
+              </button>
+            </Tooltip>
+          )}
+
           {/* Add button */}
           {role === 'admin' ? (
             <button
@@ -172,11 +196,17 @@ export default function TransactionsPage() {
         onAddNew={handleAddNew}
       />
 
-      {/* Modal */}
+      {/* Transaction Modal */}
       <TransactionModal
         isOpen={modalOpen}
         onClose={handleModalClose}
         transaction={editingTransaction}
+      />
+
+      {/* Bill Upload Modal */}
+      <BillUploadModal
+        isOpen={billUploadOpen}
+        onClose={() => setBillUploadOpen(false)}
       />
     </div>
   );
