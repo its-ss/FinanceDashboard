@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { Search, X, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../../data/mockData';
+import { DateShortcuts } from './DateShortcuts';
 import type { FilterType, SortBy } from '../../types';
 
 interface TransactionFiltersProps {
@@ -111,6 +112,9 @@ export function TransactionFilters({ dateRangeInvalid }: TransactionFiltersProps
           </button>
         </div>
       </div>
+
+      {/* Quick date shortcuts */}
+      <DateShortcuts />
 
       {/* Date range */}
       <div className="flex flex-wrap gap-2 items-center">

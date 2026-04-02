@@ -4,6 +4,7 @@ export type SortBy = 'date' | 'amount' | 'category';
 export type SortOrder = 'asc' | 'desc';
 export type FilterType = 'all' | TransactionType;
 export type SpendingRisk = 'safe' | 'warning' | 'danger';
+export type ToastVariant = 'success' | 'error' | 'info' | 'warning';
 
 export interface Transaction {
   id: string;
@@ -26,6 +27,7 @@ export interface CategoryConfig {
 
 export interface Budget {
   monthlyLimit: number;
+  categoryLimits: Record<string, number>; // category name → monthly limit
 }
 
 export interface FilterState {
@@ -70,4 +72,20 @@ export interface InsightData {
   monthOverMonthChange: number;
   projectedMonthlySpend: number;
   budgetUsagePercent: number;
+  overLimitCategories: string[];
+}
+
+export interface ToastItem {
+  id: string;
+  message: string;
+  variant: ToastVariant;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+export interface PendingDelete {
+  transaction: Transaction;
+  timerId: ReturnType<typeof setTimeout>;
 }

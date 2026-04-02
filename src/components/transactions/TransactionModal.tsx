@@ -6,7 +6,7 @@ import type { Transaction, TransactionType } from '../../types';
 
 interface TransactionModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (saved?: boolean, action?: 'add' | 'edit') => void;
   transaction?: Transaction | null;
 }
 
@@ -54,7 +54,7 @@ export function TransactionModal({ isOpen, onClose, transaction }: TransactionMo
   // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; // no save arg = cancel
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
@@ -84,10 +84,11 @@ export function TransactionModal({ isOpen, onClose, transaction }: TransactionMo
 
     if (isEdit) {
       updateTransaction(data.id, data);
+      onClose(true, 'edit');
     } else {
       addTransaction(data);
+      onClose(true, 'add');
     }
-    onClose();
   };
 
   const categories = form.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
@@ -97,7 +98,7 @@ export function TransactionModal({ isOpen, onClose, transaction }: TransactionMo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => onClose()} />
 
       {/* Modal */}
       <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md fade-in">
@@ -105,7 +106,7 @@ export function TransactionModal({ isOpen, onClose, transaction }: TransactionMo
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">
             {isEdit ? 'Edit Transaction' : 'Add Transaction'}
           </h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <button onClick={() => onClose()} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
@@ -212,7 +213,7 @@ export function TransactionModal({ isOpen, onClose, transaction }: TransactionMo
           <div className="flex gap-3 pt-1">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => onClose()}
               className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
               Cancel

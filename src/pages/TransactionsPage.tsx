@@ -16,6 +16,7 @@ export default function TransactionsPage() {
   const setFilters = useStore((s) => s.setFilters);
   const resetFilters = useStore((s) => s.resetFilters);
   const deleteTransaction = useStore((s) => s.deleteTransaction);
+  const addToast = useStore((s) => s.addToast);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -61,8 +62,16 @@ export default function TransactionsPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Delete this transaction?')) {
-      deleteTransaction(id);
+    // No confirm dialog — undo toast handles recovery
+    deleteTransaction(id);
+  };
+
+  const handleModalClose = (saved?: boolean, action?: 'add' | 'edit') => {
+    setModalOpen(false);
+    setEditingTransaction(null);
+    if (saved) {
+      if (action === 'add') addToast('Transaction added', 'success');
+      else if (action === 'edit') addToast('Transaction updated', 'success');
     }
   };
 
@@ -74,11 +83,13 @@ export default function TransactionsPage() {
   const handleExportCSV = () => {
     exportToCSV(filteredTransactions, 'transactions');
     setShowExportMenu(false);
+    addToast(`Exported ${filteredTransactions.length} transactions as CSV`, 'success');
   };
 
   const handleExportJSON = () => {
     exportToJSON(filteredTransactions, 'transactions');
     setShowExportMenu(false);
+    addToast(`Exported ${filteredTransactions.length} transactions as JSON`, 'success');
   };
 
   return (
@@ -164,7 +175,7 @@ export default function TransactionsPage() {
       {/* Modal */}
       <TransactionModal
         isOpen={modalOpen}
-        onClose={() => { setModalOpen(false); setEditingTransaction(null); }}
+        onClose={handleModalClose}
         transaction={editingTransaction}
       />
     </div>

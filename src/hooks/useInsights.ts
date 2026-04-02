@@ -117,6 +117,19 @@ export function useInsights(): InsightData {
       }
     }
 
+    // Over-limit categories (current month spend > category limit)
+    const overLimitCategories: string[] = [];
+    if (budget.categoryLimits) {
+      for (const [category, limit] of Object.entries(budget.categoryLimits)) {
+        if (limit > 0) {
+          const spent = transactions
+            .filter(t => t.type === 'expense' && t.category === category && t.date.startsWith(currentMonth))
+            .reduce((sum, t) => sum + t.amount, 0);
+          if (spent > limit) overLimitCategories.push(category);
+        }
+      }
+    }
+
     return {
       topCategoryNarrative,
       budgetStatusNarrative,
@@ -132,6 +145,7 @@ export function useInsights(): InsightData {
       monthOverMonthChange,
       projectedMonthlySpend,
       budgetUsagePercent,
+      overLimitCategories,
     };
   }, [transactions, budget]);
 }
